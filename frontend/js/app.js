@@ -65,10 +65,12 @@ transactionForm.addEventListener('submit', async (e) => {
         description: document.getElementById('description').value,
         category: document.getElementById('category').value,
         location: document.getElementById('location').value,
-        ipAddress: await getIPAddress() // Get user's IP for demo purposes
+        ipAddress: await getIPAddress(), // Get user's IP for demo purposes
+        timestamp: new Date() // Send as Date object
     };
     
     try {
+        console.log('Sending transaction data:', formData); // Debug log
         const response = await fetch(`${API_URL}/transactions`, {
             method: 'POST',
             headers: {
@@ -78,16 +80,18 @@ transactionForm.addEventListener('submit', async (e) => {
         });
         
         const result = await response.json();
+        console.log('Server response:', result); // Debug log
         
         if (response.ok) {
             modal.style.display = 'none';
             transactionForm.reset();
-            loadTransactions();
+            await loadTransactions(); // Added await here
             showNotification('Transaction added successfully', 'success');
         } else {
-            throw new Error(result.message);
+            throw new Error(result.message || 'Failed to add transaction');
         }
     } catch (error) {
+        console.error('Error adding transaction:', error); // Debug log
         showNotification(error.message, 'error');
     }
 });
@@ -95,8 +99,28 @@ transactionForm.addEventListener('submit', async (e) => {
 // Load Transactions
 async function loadTransactions() {
     try {
+        console.log('Fetching transactions...'); // Debug log
         const response = await fetch(`${API_URL}/transactions`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const transactions = await response.json();
+        console.log('Received transactions:', transactions); // Debug log
+        
+        if (!Array.isArray(transactions)) {
+            throw new Error('Invalid response format: expected an array of transactions');
+        }
+        
+        if (transactions.length === 0) {
+            transactionsBody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center;">No transactions found</td>
+                </tr>
+            `;
+            return;
+        }
         
         transactionsBody.innerHTML = transactions.map(transaction => `
             <tr class="${transaction.isFraudulent ? 'fraud' : ''}">
@@ -114,7 +138,13 @@ async function loadTransactions() {
             </tr>
         `).join('');
     } catch (error) {
-        showNotification('Error loading transactions', 'error');
+        console.error('Error loading transactions:', error); // Debug log
+        showNotification('Error loading transactions: ' + error.message, 'error');
+        transactionsBody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center;">Error loading transactions</td>
+            </tr>
+        `;
     }
 }
 

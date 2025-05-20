@@ -3,7 +3,10 @@ const Transaction = require('../models/Transaction');
 // 1. Threshold-based Anomalies
 const checkHighValueTransaction = (amount) => {
     const THRESHOLD = 10000;
-    return amount > THRESHOLD;
+    // Convert amount to number if it's a string
+    const numAmount = Number(amount);
+    console.log('Checking high value:', { amount: numAmount, threshold: THRESHOLD });
+    return numAmount > THRESHOLD;
 };
 
 const checkFrequencyAnomaly = async (accountId) => {
@@ -21,32 +24,46 @@ const checkFrequencyAnomaly = async (accountId) => {
 // 2. Statistical Methods (Z-Score)
 const calculateZScore = async (amount) => {
     const transactions = await Transaction.find({}, 'amount');
-    const amounts = transactions.map(t => t.amount);
+    if (transactions.length === 0) return false;
     
+    const amounts = transactions.map(t => Number(t.amount));
     const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length;
     const std = Math.sqrt(amounts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / amounts.length);
     
-    const zScore = (amount - mean) / std;
-    return Math.abs(zScore) > 3; // Three-sigma rule
+    if (std === 0 || transactions.length < 2) return false;
+    
+    const zScore = Math.abs((Number(amount) - mean) / std);
+    console.log('Z-Score calculation:', { amount, mean, std, zScore });
+    return zScore > 3;
 };
 
-// 3. Pattern Matching (Rabin-Karp)
+// 3. Pattern Matching
 const checkSuspiciousKeywords = (description) => {
-    const keywords = ['crypto', 'btc', 'gift', 'urgent', 'emergency'];
-    const desc = description.toLowerCase();
-    return keywords.some(keyword => desc.includes(keyword));
+    if (!description) return false;
+    const keywords = ['crypto', 'btc', 'gift', 'urgent', 'emergency', 'bitcoin', 'eth', 'help'];
+    const desc = description.toLowerCase().trim();
+    const foundKeywords = keywords.filter(keyword => desc.includes(keyword));
+    console.log('Checking keywords:', { description: desc, foundKeywords });
+    return foundKeywords.length > 0;
 };
 
 // 4. Time-Based Logic
 const checkTimeAnomaly = async (accountId, timestamp) => {
-    const TIME_WINDOW = 5 * 60 * 1000; // 5 minutes in milliseconds
+    if (!accountId || !timestamp) return false;
+    const TIME_WINDOW = 5 * 60 * 1000; // 5 minutes
     
     const recentTransactions = await Transaction.find({
         accountId,
-        timestamp: { $gte: new Date(timestamp - TIME_WINDOW) }
+        timestamp: { $gte: new Date(new Date(timestamp).getTime() - TIME_WINDOW) }
     });
     
-    return recentTransactions.length >= 3; // More than 3 transactions in 5 minutes
+    console.log('Time anomaly check:', { 
+        accountId, 
+        recentCount: recentTransactions.length,
+        timeWindow: '5 minutes'
+    });
+    
+    return recentTransactions.length >= 3;
 };
 
 // 5. Geo-Location Heuristics
@@ -79,6 +96,8 @@ const checkGraphAnomaly = async (accountId, amount) => {
 // 7. Clustering Analysis
 const checkClusterAnomaly = async (amount) => {
     const transactions = await Transaction.find({}, 'amount');
+    if (transactions.length === 0) return false; // Return false if no transactions exist
+    
     const amounts = transactions.map(t => t.amount);
     
     // Simple clustering using average
@@ -103,47 +122,73 @@ const checkTransactionNetwork = async (accountId) => {
     return transactions.length / n > 2; // If average edges per node is high
 };
 
-// Main fraud detection function that combines all checks
+// Main fraud detection function
 const detectFraud = async (transaction) => {
-    const fraudFlags = [];
-    
-    // Run all fraud detection algorithms
-    if (checkHighValueTransaction(transaction.amount)) {
-        fraudFlags.push('high_value');
+    try {
+        console.log('Received transaction for fraud detection:', transaction);
+        
+        // Validate transaction data
+        if (!transaction || typeof transaction !== 'object') {
+            console.error('Invalid transaction data received');
+            return { isFraudulent: false, fraudFlags: [] };
+        }
+
+        const { amount, accountId, description, location, timestamp } = transaction;
+        
+        if (!amount || !accountId || !description || !location) {
+            console.error('Missing required transaction fields');
+            return { isFraudulent: false, fraudFlags: [] };
+        }
+
+        const fraudFlags = [];
+        
+        // High value check
+        if (checkHighValueTransaction(amount)) {
+            fraudFlags.push('high_value');
+        }
+        
+        // Frequency check
+        if (await checkFrequencyAnomaly(accountId)) {
+            fraudFlags.push('frequency_anomaly');
+        }
+        
+        // Statistical analysis
+        if (await calculateZScore(amount)) {
+            fraudFlags.push('statistical_outlier');
+        }
+        
+        // Keyword check
+        if (checkSuspiciousKeywords(description)) {
+            fraudFlags.push('pattern_match');
+        }
+        
+        // Time anomaly
+        if (await checkTimeAnomaly(accountId, timestamp)) {
+            fraudFlags.push('time_anomaly');
+        }
+        
+        // Location check
+        if (await checkGeoAnomaly(accountId, location)) {
+            fraudFlags.push('geo_anomaly');
+        }
+        
+        console.log('Fraud detection results:', {
+            transactionId: transaction._id,
+            fraudFlags,
+            isFraudulent: fraudFlags.length > 0
+        });
+        
+        return {
+            isFraudulent: fraudFlags.length > 0,
+            fraudFlags
+        };
+    } catch (error) {
+        console.error('Error in fraud detection:', error);
+        return {
+            isFraudulent: false,
+            fraudFlags: []
+        };
     }
-    
-    if (await checkFrequencyAnomaly(transaction.accountId)) {
-        fraudFlags.push('frequency_anomaly');
-    }
-    
-    if (await calculateZScore(transaction.amount)) {
-        fraudFlags.push('statistical_outlier');
-    }
-    
-    if (checkSuspiciousKeywords(transaction.description)) {
-        fraudFlags.push('pattern_match');
-    }
-    
-    if (await checkClusterAnomaly(transaction.amount)) {
-        fraudFlags.push('cluster_outlier');
-    }
-    
-    if (await checkTimeAnomaly(transaction.accountId, transaction.timestamp)) {
-        fraudFlags.push('time_anomaly');
-    }
-    
-    if (await checkGeoAnomaly(transaction.accountId, transaction.location)) {
-        fraudFlags.push('geo_anomaly');
-    }
-    
-    if (await checkGraphAnomaly(transaction.accountId, transaction.amount)) {
-        fraudFlags.push('graph_anomaly');
-    }
-    
-    return {
-        isFraudulent: fraudFlags.length > 0,
-        fraudFlags
-    };
 };
 
 module.exports = {

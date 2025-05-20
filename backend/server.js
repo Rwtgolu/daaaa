@@ -11,7 +11,11 @@ const server = http.createServer(app);
 initializeWebSocket(server);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:8080', 'http://127.0.0.1:8080'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+}));
 app.use(express.json());
 
 // Routes
