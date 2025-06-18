@@ -29,6 +29,18 @@ const transactionSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    deviceId: {
+        type: String,
+        default: null
+    },
+    browserId: {
+        type: String,
+        default: null
+    },
+    recipientAccountId: {
+        type: String,
+        default: null
+    },
     isFraudulent: {
         type: Boolean,
         default: false
@@ -38,12 +50,14 @@ const transactionSchema = new mongoose.Schema({
         enum: [
             'high_value',
             'frequency_anomaly',
-            'statistical_outlier',
-            'pattern_match',
-            'cluster_outlier',
+            'location_anomaly',
+            'device_anomaly',
+            'login_anomaly',
+            'suspicious_recipient',
+            'circular_transaction',
             'time_anomaly',
-            'geo_anomaly',
-            'graph_anomaly'
+            'velocity_anomaly',
+            'statistical_outlier'
         ]
     }]
 });

@@ -103,9 +103,41 @@
         <!-- Transactions Section -->
         <section id="transactions" class="section">
             <div class="card">
-                <h2>Recent Transactions</h2>
+                <h2>Transaction Management</h2>
+                
+                <!-- File Upload Section -->
+                <div class="upload-section">
+                    <h3>Bulk Upload Transactions</h3>
+                    <div class="upload-container">
+                        <div class="file-upload-area">
+                            <input type="file" id="transaction-file" accept=".csv,.txt" style="display: none;">
+                            <div class="upload-drop-zone" id="upload-drop-zone">
+                                <div class="upload-icon">📁</div>
+                                <p>Drag & drop CSV or TXT file here</p>
+                                <p>or</p>
+                                <button type="button" class="btn secondary" id="browse-btn">Browse Files</button>
+                            </div>
+                            <div class="upload-info">
+                                <p><strong>Supported formats:</strong> CSV, TXT (tab or space separated)</p>
+                                <p><strong>Required fields:</strong> accountId, amount</p>
+                                <p><strong>Optional fields:</strong> description, category, location, ipAddress, timestamp</p>
+                                <button type="button" class="btn link" id="show-sample-btn">View Sample Format</button>
+                            </div>
+                        </div>
+                        <div class="upload-actions">
+                            <button type="button" class="btn primary" id="upload-btn" disabled>Upload & Process</button>
+                            <div class="upload-progress" id="upload-progress" style="display: none;">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progress-fill"></div>
+                                </div>
+                                <p id="progress-text">Processing...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="transaction-controls">
-                    <button id="add-transaction-btn" class="btn primary">Add Transaction</button>
+                    <button id="add-transaction-btn" class="btn primary">Add Single Transaction</button>
                     <input type="text" id="transaction-search" placeholder="Search transactions...">
                 </div>
                 <div class="transactions-table-container">
@@ -167,8 +199,64 @@
                     <label for="location">Location</label>
                     <input type="text" id="location" required>
                 </div>
+                <div class="form-group">
+                    <label for="ipAddress">IP Address</label>
+                    <input type="text" id="ipAddress" placeholder="192.168.1.1">
+                </div>
+                <div class="form-group">
+                    <label for="deviceId">Device ID (Optional)</label>
+                    <input type="text" id="deviceId" placeholder="device_123">
+                </div>
+                <div class="form-group">
+                    <label for="browserId">Browser ID (Optional)</label>
+                    <input type="text" id="browserId" placeholder="browser_456">
+                </div>
+                <div class="form-group">
+                    <label for="recipientAccountId">Recipient Account ID (Optional)</label>
+                    <input type="text" id="recipientAccountId" placeholder="ACC002">
+                </div>
                 <button type="submit" class="btn primary">Submit</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Sample Format Modal -->
+    <div id="sample-format-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Sample File Format</h2>
+            <div class="format-tabs">
+                <button class="tab-btn active" data-format="csv">CSV Format</button>
+                <button class="tab-btn" data-format="txt">TXT Format</button>
+            </div>
+            <div class="format-content">
+                <div id="csv-sample" class="format-sample active">
+                    <h3>CSV Format (Comma Separated)</h3>
+                    <pre><code>accountId,amount,description,category,location,ipAddress,timestamp
+ACC001,1500.50,Grocery purchase,purchase,New York,192.168.1.1,2024-01-15 10:30:00
+ACC002,2500.75,Online transfer,transfer,Los Angeles,192.168.1.2,2024-01-15 11:45:00
+ACC003,500.25,ATM withdrawal,withdrawal,Chicago,192.168.1.3,2024-01-15 12:15:00</code></pre>
+                </div>
+                <div id="txt-sample" class="format-sample">
+                    <h3>TXT Format (Tab Separated)</h3>
+                    <pre><code>accountId	amount	description	category	location	ipAddress	timestamp
+ACC001	1500.50	Grocery purchase	purchase	New York	192.168.1.1	2024-01-15 10:30:00
+ACC002	2500.75	Online transfer	transfer	Los Angeles	192.168.1.2	2024-01-15 11:45:00
+ACC003	500.25	ATM withdrawal	withdrawal	Chicago	192.168.1.3	2024-01-15 12:15:00</code></pre>
+                </div>
+            </div>
+            <div class="format-notes">
+                <h4>Notes:</h4>
+                <ul>
+                    <li><strong>accountId</strong> and <strong>amount</strong> are required fields</li>
+                    <li>First row should contain headers</li>
+                    <li>For CSV files, use commas to separate values</li>
+                    <li>For TXT files, use tabs or spaces to separate values</li>
+                    <li>If timestamp is not provided, current time will be used</li>
+                    <li>If location is not provided, "Unknown" will be used</li>
+                    <li>If ipAddress is not provided, "127.0.0.1" will be used</li>
+                </ul>
+            </div>
         </div>
     </div>
 
